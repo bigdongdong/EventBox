@@ -18,14 +18,14 @@ public class ThirdActivity extends AppCompatActivity {
     }
 
     public void sendFirstActivity(View view){
-        EventBox.getDefault().send(FirstActivity.class,new String[]{"sds","sss","cccc"});
+        EventBox.getDefault().send(new String[]{"sds","sss","cccc"} ,FirstActivity.class);
     }
     public void sendSecondActivity(View view){
-        EventBox.getDefault().send(SecondActivity.class,"爱你一万年");
+        EventBox.getDefault().send("爱你一万年" , SecondActivity.class );
     }
     public void sendBothActivity(View view){
-        EventBox.getDefault().send(FirstActivity.class,"爱你一万年");
-        EventBox.getDefault().send(SecondActivity.class,"爱你一万年");
+//        EventBox.getDefault().send("爱你一万年");
+        EventBox.getDefault().send("爱你一万年",FirstActivity.class,SecondActivity.class);
     }
 
     public void gotoFirstActivity(View view){

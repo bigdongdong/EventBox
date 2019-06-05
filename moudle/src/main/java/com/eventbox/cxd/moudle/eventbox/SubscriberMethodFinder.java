@@ -1,7 +1,5 @@
 package com.eventbox.cxd.moudle.eventbox;
 
-import com.alibaba.fastjson.JSON;
-
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +38,7 @@ class SubscriberMethodFinder {
         for(Method method : methods){
             subscribeAnno = method.getAnnotation(Subscribe.class);
             if(subscribeAnno != null && method.getParameterTypes().length == 1){
-                subscriberMethods.add(new SubscriberMethod(method,method.getParameterTypes()[0])) ;
+                subscriberMethods.add(new SubscriberMethod(method,method.getParameterTypes()[0],subscribeAnno.threadMode())) ;
             }
         }
         return subscriberMethods ;

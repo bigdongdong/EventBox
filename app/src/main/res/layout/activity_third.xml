@@ -11,7 +11,7 @@
 
     <Button
         android:onClick="sendFirstActivity"
-        android:text="只给FirstActivity发送：爱你一万年"
+        android:text="只给FirstActivity发送：new String[]"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
     <Button

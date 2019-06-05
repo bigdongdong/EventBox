@@ -1,6 +1,9 @@
 package com.eventbox.cxd.moudle.eventbox;
 
+import android.os.Looper;
 import android.util.Log;
+
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,46 +15,55 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /*
 * 目前存在的问题：
 * 1.基础类型中 int 无法识别，但是Integer可以
-* 其他常用类型：String 、String[] 都可以
 *
-* 2.目前的无目的传输，不是粘性event，所以不建议使用
+* 2.不建议使用非指向性传输，因为非指向性传输的event是抢占性质的，
+* 即有一个后注册的subscriber消费了缓存中的event，
+* 则其他后注册的subscriber无法接收到事件
+* 强烈建议采用指向性传输，如果要一对多传输，
+* 可采用send(Object event ,Class<?>... subscriberClasses)方法
 * */
 public class EventBox {
 
     private static String TAG = "EventBox";
 
-    static volatile EventBox defaultInstance;  //默认单例
-
+    static volatile EventBox instance ;  //默认单例
 
     //subscriber类中 注解方法查找类
     private SubscriberMethodFinder subscriberMethodFinder = new SubscriberMethodFinder();
 
-    //<事件类型，该事件对应的所有subscription> 的map
+    //<eventType，List<Subscription> >
     private  Map<Class<?>, CopyOnWriteArrayList<Subscription>> subscriptionsByEventType = new HashMap<>();
 
-    //注册的subscriberClass
+    //<subscriberClass , List<Subscription> >
     private Map<Class<?>,CopyOnWriteArrayList<Subscription>> subscriptionsBySubscriberClass = new HashMap<>();
 
-    //未被及时处理的event缓存map，且已经指明订阅者  <subscriberClass , List<event> >
+    //<subscriberClass , List<event> >  未被及时处理的event缓存map，且已经指明订阅者
     private Map<Class<?>, List<Object>> cacheEventsBySubscriberClass = new HashMap<>();
 
+    //<eventType , List<event> >
+    // 强制缓存所有非指定性event，但其中的event是抢占性质，
+    // 即先到先得，第一个补注册的subscriber可以获得，之后则没有
+    private Map<Class<?> , List<Object>> cacheEventsByEventType = new HashMap<>();
+
+
+    //单例构造器
     public static EventBox getDefault(){
-        if (defaultInstance == null) {
+        if (instance == null) {
             synchronized (EventBox.class) {
-                if (defaultInstance == null) {
-                    defaultInstance = new EventBox();
+                if (instance == null) {
+                    instance = new EventBox();
                 }
             }
         }
-        return defaultInstance;
+        return instance;
     }
 
     /**
      * 注册
      * @param subscriber 需要注册eventbox的类
      */
-    public void register(Object subscriber) {
-        Class<?> subscriberClass = subscriber.getClass();  //获取注册类的类类型
+    public synchronized void register(Object subscriber) {
+        Class<?> subscriberClass = subscriber.getClass();
 
         //避免重复注册
         if (subscriptionsBySubscriberClass.containsKey(subscriberClass)){
@@ -60,22 +72,57 @@ public class EventBox {
 
         //根据这个类的类类型，查找到所有带有注解 @Subscribe 的方法
         List<SubscriberMethod> subscriberMethods = subscriberMethodFinder.findSubscriberMethods(subscriberClass);
-        synchronized (this) {
-            for (SubscriberMethod subscriberMethod : subscriberMethods) {
-                subscribe(subscriber, subscriberMethod);
+        for (SubscriberMethod subscriberMethod : subscriberMethods) {
+            subscribe(subscriber, subscriberMethod);
+        }
+
+        //检查并发送指向性event
+        List<Object> cacheEvents = cacheEventsBySubscriberClass.remove(subscriberClass);
+        if(cacheEvents != null){
+            for (Object cacheEvent : cacheEvents){
+                send(cacheEvent , subscriberClass);
             }
         }
 
-        //检查cacheEvents中是否存在指定给该subscriber的cacheEvent
-        List<Object> cacheEvents = cacheEventsBySubscriberClass.remove(subscriberClass);
+        //检查并发送非指向性event(抢占式)
+        for (SubscriberMethod subscriberMethod : subscriberMethods) {
+            cacheEvents = cacheEventsByEventType.remove(subscriberMethod.eventType);
+            if(cacheEvents != null){
+                for (Object cacheEvent : cacheEvents){
+                    send(cacheEvent , subscriber.getClass());
+                }
+            }
+        }
 
-        if(cacheEvents == null){
-            return;
+    }
+
+    /**
+     * 进行订阅
+     * @param subscriber
+     * @param subscriberMethod
+     */
+    private void subscribe(Object subscriber, SubscriberMethod subscriberMethod) {
+        Class<?> eventType = subscriberMethod.eventType;
+        Subscription thisSuscription = new Subscription(subscriber, subscriberMethod);
+        CopyOnWriteArrayList<Subscription> subscriptions ;
+
+        //1.subscriptionsBySubscriberClass中添加
+        subscriptions  = subscriptionsBySubscriberClass.get(subscriber.getClass());
+        if(subscriptions == null){
+            subscriptions = new CopyOnWriteArrayList<>();
         }
-        //遍历，将该类的events发送掉
-        for (Object cacheEvent : cacheEvents){
-            send(subscriberClass,cacheEvent);
+        subscriptions.add(thisSuscription);
+        subscriptionsBySubscriberClass.put(subscriber.getClass(),subscriptions);
+
+
+        //2.subscriptionsByEventType中添加
+        subscriptions = subscriptionsByEventType.get(eventType);
+        if(subscriptions == null){
+            subscriptions = new CopyOnWriteArrayList<>();
         }
+        subscriptions.add(thisSuscription);
+        subscriptionsByEventType.put(eventType, subscriptions);
+
     }
 
     /**
@@ -122,49 +169,15 @@ public class EventBox {
     }
 
     /**
-     * 进行订阅
-     * @param subscriber
-     * @param subscriberMethod
-     */
-    private void subscribe(Object subscriber, SubscriberMethod subscriberMethod) {
-        Class<?> eventType = subscriberMethod.eventType;
-        Subscription thisSuscription = new Subscription(subscriber, subscriberMethod);
-
-
-        CopyOnWriteArrayList<Subscription> subscriptions ;
-
-        //1.先进行注册记录list添加
-        subscriptions  = subscriptionsBySubscriberClass.get(subscriber.getClass());
-        if(subscriptions == null){
-            subscriptions = new CopyOnWriteArrayList<>();
-        }
-        subscriptions.add(thisSuscription);
-        subscriptionsBySubscriberClass.put(subscriber.getClass(),subscriptions);
-
-
-        //2.再进行查找记录list添加
-        subscriptions = subscriptionsByEventType.get(eventType);
-        if(subscriptions == null){
-            subscriptions = new CopyOnWriteArrayList<>();
-        }
-        subscriptions.add(thisSuscription);
-        subscriptionsByEventType.put(eventType, subscriptions);
-
-    }
-
-    /**
-     * 发送需要的内容，该方法不筛选订阅者
+     * 发送非指向性event
      *
-     * !!!!!!!!!!!!!
-     * 不建议使用该方法，无目的传输所发送的event都不是粘性event
-     * 如果unregister了subscriber，则无法接收到无目的消息
-     * 无目的的传输类似EventBus中的post
-     * 但是EventBus中对所有event进行了缓存
-     *
-     * 该方法对比EventBus中的post方法有如下缺点：
-     * 1.没有建设缓存，在unregister的subscriber中无法接受该方法发出的event
-     *
-     * !!!!!!!!!!!!!
+     * !!!!!!!!!!!!!!!!!!!
+     * 不建议使用非指向性传输，因为非指向性传输的event是抢占性质的，
+     * 即有一个后注册的subscriber消费了缓存中的event，
+     * 则其他后注册的subscriber无法接收到事件
+     * 强烈建议采用指向性传输，如果要一对多传输，
+     * 可采用send(Object event ,Class<?>... subscriberClasses)方法
+     * !!!!!!!!!!!!!!!!!!!
      *
      * @param event
      */
@@ -175,17 +188,24 @@ public class EventBox {
         //在subscriptionsByEventType中获取eventType对应的subscriptions
         CopyOnWriteArrayList<Subscription> subscriptions = subscriptionsByEventType.get(eventType);
 
+        //强制缓存
+        List<Object> cacheEvents = cacheEventsByEventType.get(eventType);
+        if (cacheEvents == null) {
+            cacheEvents = new ArrayList<>();
+        }
+        cacheEvents.add(event);
+        cacheEventsByEventType.put(eventType, cacheEvents);
+
         //进行延迟处理
         if(subscriptions == null) {
             Log.e(TAG, "未查找到已注册的subscriber" );
-            return;
+
         }
 
         for(Subscription subscription : subscriptions){
+            //利用反射调用
             try {
-                //利用反射调用
-                subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
-
+                sendByThread(subscription,event);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -193,20 +213,17 @@ public class EventBox {
     }
 
     /**
-     * 发送需要的内容，可以定向发送至某个订阅者
+     * 发送指向性event
      *
      * 为保证性能，一般subscriber需要在onStop或onDestory方法中unregister
      * 有目的地传输，发送的都是粘性event，保证之后register的subscriber可以接受到
      *
-     * 该方法对比EventBus中的post方法有如下有点：
-     * 1.可以定向发送event，并且event都是粘性事件
-     *
-     * @param subscriberClass
      * @param event
+     * @param subscriberClass
      */
-    public synchronized void send(Class<?> subscriberClass ,Object event) {
+    public synchronized void send(Object event ,Class<?> subscriberClass) {
         Class<?> eventType = event.getClass();
-        boolean hasSubscriberRegistered = false ; //被指定的subscriber是否已经注册
+        boolean hasRegisteredSubscriber = false ; //被指定的subscriber是否已经注册
 
         //在subscriptionsByEventType中获取eventType对应的subscriptions
         CopyOnWriteArrayList<Subscription> subscriptions = subscriptionsByEventType.get(eventType);
@@ -214,7 +231,7 @@ public class EventBox {
         if(subscriptions!=null){
             for(Subscription subscription : subscriptions){
                if(subscription.subscriber.getClass().equals(subscriberClass)){
-                   hasSubscriberRegistered = true ;
+                   hasRegisteredSubscriber = true ;
                    break;
                }else{
                    continue;
@@ -223,8 +240,7 @@ public class EventBox {
         }
 
        //进行延迟处理
-        if(hasSubscriberRegistered == false) {
-//            Log.e(TAG, "未查找到已注册的subscriber，已将event存入缓存" );
+        if(hasRegisteredSubscriber == false) {
             List<Object> cacheEvents = cacheEventsBySubscriberClass.get(subscriberClass);
             if (cacheEvents == null) {
                 cacheEvents = new ArrayList<>();
@@ -235,19 +251,78 @@ public class EventBox {
         }
 
         for(Subscription subscription : subscriptions){
-            //当subscriberClass不为空，并且subscriberClass不相符时，直接跳跃到下一次循环
-            if(subscriberClass!=null && !subscription.subscriber.getClass().equals(subscriberClass)){
+            //当subscriberClass不相符时，直接跳跃到下一次循环
+            if(!subscription.subscriber.getClass().equals(subscriberClass)){
                 continue;
             }else{
+                //利用反射调用
                 try {
-                    //利用反射调用
-                    subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
-                    return ;
-
+                    sendByThread(subscription,event);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+                return ;
             }
         }
+    }
+
+
+    /**
+     * 发送指向性event，并指定某些个类接受
+     * @param event
+     * @param subscriberClasses
+     */
+    public void send(Object event ,Class<?>... subscriberClasses){
+        for(Class<?> subscriberClass : subscriberClasses){
+            send(event,subscriberClass);
+        }
+    }
+
+
+    /**
+     * 根据线程，将event转至对应subscriber的方法里
+     * @param subscription
+     * @param event
+     * @throws InvocationTargetException
+     * @throws IllegalAccessException
+     */
+    private void sendByThread(final Subscription subscription, final Object event) throws InvocationTargetException, IllegalAccessException {
+        switch (subscription.subscriberMethod.threadMode){
+            case DEFAULT:
+                subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
+                break;
+            case MAIN:
+                //TODO 主线程问题
+
+                break;
+            case NEW_THREAD:
+                new Runnable(){
+                    @Override
+                    public void run() {
+                        try {
+                            subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }.run();
+                break;
+        }
+    }
+
+    /**
+     * 判断当前是否是主线程
+     * @return
+     */
+    public boolean isMainThread() {
+        return Looper.getMainLooper() == Looper.myLooper();
+    }
+
+
+    /**
+     * 手动清空未指定event缓存
+     */
+    public void clean(){
+        cacheEventsByEventType.clear();
     }
 }
