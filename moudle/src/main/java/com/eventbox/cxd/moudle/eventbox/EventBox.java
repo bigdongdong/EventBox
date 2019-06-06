@@ -1,8 +1,6 @@
 package com.eventbox.cxd.moudle.eventbox;
 
-import android.os.Looper;
 import android.util.Log;
-
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -73,7 +71,6 @@ public class EventBox {
                 send(cacheEvent , subscriberClass);
             }
         }
-
     }
 
     /**
@@ -122,7 +119,7 @@ public class EventBox {
                 if(subscriptions.contains(subscription)){
 
                     //这里只移除了subscriptionsByEventType中某一个eventType的某一个subscription
-                    //即使subscriptions2中全部被移除，map的长度也不会降低
+                    //即使subscriptions2中全部被移除，map的长度也不会降低，只是value是空
                     subscriptions2.remove(subscription);
                 }
             }
@@ -184,7 +181,7 @@ public class EventBox {
      * @param event
      * @param subscriberClass
      */
-    public synchronized void send(Object event ,Class<?> subscriberClass) {
+    public synchronized void send(Object event , Class<?> subscriberClass) {
         Class<?> eventType = event.getClass();
         boolean hasRegisteredSubscriber = false ; //被指定的subscriber是否已经注册
 
@@ -196,8 +193,6 @@ public class EventBox {
                if(subscription.subscriber.getClass().equals(subscriberClass)){
                    hasRegisteredSubscriber = true ;
                    break;
-               }else{
-                   continue;
                }
             }
         }
@@ -221,10 +216,10 @@ public class EventBox {
                 //利用反射调用
                 try {
                     sendEventByThread(subscription,event);
+                    return ;
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-                return ;
             }
         }
     }
