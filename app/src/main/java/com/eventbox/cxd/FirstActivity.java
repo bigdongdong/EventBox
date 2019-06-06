@@ -11,13 +11,14 @@ import com.alibaba.fastjson.JSON;
 import com.eventbox.cxd.moudle.eventbox.EventBox;
 import com.eventbox.cxd.moudle.eventbox.Subscribe;
 
+import org.greenrobot.eventbus.EventBus;
+
 public class FirstActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
 
     }
 

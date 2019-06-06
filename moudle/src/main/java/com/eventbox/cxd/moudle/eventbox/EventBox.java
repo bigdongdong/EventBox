@@ -16,11 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 * 目前存在的问题：
 * 1.基础类型中 int 无法识别，但是Integer可以
 *
-* 2.不建议使用非指向性传输，因为非指向性传输的event是抢占性质的，
-* 即有一个后注册的subscriber消费了缓存中的event，
-* 则其他后注册的subscriber无法接收到事件
-* 强烈建议采用指向性传输，如果要一对多传输，
-* 可采用send(Object event ,Class<?>... subscriberClasses)方法
+* 2.不建议使用非指向性event的send方法
 * */
 public class EventBox {
 
@@ -39,12 +35,6 @@ public class EventBox {
 
     //<subscriberClass , List<event> >  未被及时处理的event缓存map，且已经指明订阅者
     private Map<Class<?>, List<Object>> cacheEventsBySubscriberClass = new HashMap<>();
-
-    //<eventType , List<event> >
-    // 强制缓存所有非指定性event，但其中的event是抢占性质，
-    // 即先到先得，第一个补注册的subscriber可以获得，之后则没有
-    private Map<Class<?> , List<Object>> cacheEventsByEventType = new HashMap<>();
-
 
     //单例构造器
     public static EventBox getDefault(){
@@ -81,16 +71,6 @@ public class EventBox {
         if(cacheEvents != null){
             for (Object cacheEvent : cacheEvents){
                 send(cacheEvent , subscriberClass);
-            }
-        }
-
-        //检查并发送非指向性event(抢占式)
-        for (SubscriberMethod subscriberMethod : subscriberMethods) {
-            cacheEvents = cacheEventsByEventType.remove(subscriberMethod.eventType);
-            if(cacheEvents != null){
-                for (Object cacheEvent : cacheEvents){
-                    send(cacheEvent , subscriber.getClass());
-                }
             }
         }
 
@@ -171,14 +151,6 @@ public class EventBox {
     /**
      * 发送非指向性event
      *
-     * !!!!!!!!!!!!!!!!!!!
-     * 不建议使用非指向性传输，因为非指向性传输的event是抢占性质的，
-     * 即有一个后注册的subscriber消费了缓存中的event，
-     * 则其他后注册的subscriber无法接收到事件
-     * 强烈建议采用指向性传输，如果要一对多传输，
-     * 可采用send(Object event ,Class<?>... subscriberClasses)方法
-     * !!!!!!!!!!!!!!!!!!!
-     *
      * @param event
      */
     @Deprecated
@@ -188,24 +160,15 @@ public class EventBox {
         //在subscriptionsByEventType中获取eventType对应的subscriptions
         CopyOnWriteArrayList<Subscription> subscriptions = subscriptionsByEventType.get(eventType);
 
-        //强制缓存
-        List<Object> cacheEvents = cacheEventsByEventType.get(eventType);
-        if (cacheEvents == null) {
-            cacheEvents = new ArrayList<>();
-        }
-        cacheEvents.add(event);
-        cacheEventsByEventType.put(eventType, cacheEvents);
-
-        //进行延迟处理
         if(subscriptions == null) {
             Log.e(TAG, "未查找到已注册的subscriber" );
-
+            return;
         }
 
         for(Subscription subscription : subscriptions){
             //利用反射调用
             try {
-                sendByThread(subscription,event);
+                sendEventByThread(subscription,event);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -257,7 +220,7 @@ public class EventBox {
             }else{
                 //利用反射调用
                 try {
-                    sendByThread(subscription,event);
+                    sendEventByThread(subscription,event);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -278,7 +241,6 @@ public class EventBox {
         }
     }
 
-
     /**
      * 根据线程，将event转至对应subscriber的方法里
      * @param subscription
@@ -286,43 +248,39 @@ public class EventBox {
      * @throws InvocationTargetException
      * @throws IllegalAccessException
      */
-    private void sendByThread(final Subscription subscription, final Object event) throws InvocationTargetException, IllegalAccessException {
-        switch (subscription.subscriberMethod.threadMode){
-            case DEFAULT:
-                subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
-                break;
-            case MAIN:
-                //TODO 主线程问题
+    private void sendEventByThread(final Subscription subscription, final Object event) throws InvocationTargetException, IllegalAccessException {
 
-                break;
-            case NEW_THREAD:
-                new Runnable(){
-                    @Override
-                    public void run() {
-                        try {
-                            subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }.run();
-                break;
-        }
+        subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
+
+//        switch (subscription.subscriberMethod.threadMode){
+//            case DEFAULT:
+//                subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
+//                break;
+//            case MAIN:
+//                //TODO 主线程问题
+//
+//                break;
+//            case NEW_THREAD:
+//                new Runnable(){
+//                    @Override
+//                    public void run() {
+//                        try {
+//                            subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
+//                        } catch (Exception e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                }.run();
+//                break;
+//        }
     }
 
     /**
      * 判断当前是否是主线程
      * @return
      */
-    public boolean isMainThread() {
-        return Looper.getMainLooper() == Looper.myLooper();
-    }
+//    public boolean isMainThread() {
+//        return Looper.getMainLooper() == Looper.myLooper();
+//    }
 
-
-    /**
-     * 手动清空未指定event缓存
-     */
-    public void clean(){
-        cacheEventsByEventType.clear();
-    }
 }
