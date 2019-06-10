@@ -38,17 +38,28 @@ public class FirstActivity extends AppCompatActivity {
     @Subscribe
     public void getData(String s){
         Toast.makeText(this,"FirstActivity"+s,Toast.LENGTH_SHORT).show();
-        Log.i("EventBox", "FirstActivity: "+s);
+        Log.i("EventBox", "FirstActivity:String: "+s);
     }
     @Subscribe
     public void getData(Integer s){
         Toast.makeText(this,"FirstActivity"+s,Toast.LENGTH_SHORT).show();
-        Log.i("EventBox", "FirstActivity: "+s);
+        Log.i("EventBox", "FirstActivity:Integer: "+s);
     }
+    @Subscribe
+    public void getData(Float s){
+        Toast.makeText(this,"FirstActivity"+s,Toast.LENGTH_SHORT).show();
+        Log.i("EventBox", "FirstActivity: float:"+s);
+    }
+
     @Subscribe
     public void getData(String[] s){
         Toast.makeText(this,"FirstActivity"+ JSON.toJSONString(s),Toast.LENGTH_SHORT).show();
-        Log.i("EventBox", "FirstActivity: "+s);
+        Log.i("EventBox", "FirstActivity: String[]:"+s);
+    }
+    @Subscribe
+    public void getData(Double s){
+        Toast.makeText(this,"FirstActivity"+ JSON.toJSONString(s),Toast.LENGTH_SHORT).show();
+        Log.i("EventBox", "FirstActivity: double:"+s);
     }
 
     public void goToSecondActivity(View view){

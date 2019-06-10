@@ -12,9 +12,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /*
 * 目前存在的问题：
-* 1.基础类型中 int 无法识别，但是Integer可以
-*
+* 1.基础类型中 int,float,double 无法识别，但是Integer,Float,Double可以(基本类型不可以，但是可以使用它们的包装类)
 * 2.不建议使用非指向性event的send方法
+* 3.线程问题
+* 4.unregister：hashmap中value为空的清除问题
 * */
 public class EventBox {
 
@@ -188,6 +189,7 @@ public class EventBox {
         //在subscriptionsByEventType中获取eventType对应的subscriptions
         CopyOnWriteArrayList<Subscription> subscriptions = subscriptionsByEventType.get(eventType);
 
+        //判断对应subscriber是否已经注册
         if(subscriptions!=null){
             for(Subscription subscription : subscriptions){
                if(subscription.subscriber.getClass().equals(subscriberClass)){
@@ -197,7 +199,7 @@ public class EventBox {
             }
         }
 
-       //进行延迟处理
+       //进行粘性处理
         if(hasRegisteredSubscriber == false) {
             List<Object> cacheEvents = cacheEventsBySubscriberClass.get(subscriberClass);
             if (cacheEvents == null) {
@@ -209,10 +211,7 @@ public class EventBox {
         }
 
         for(Subscription subscription : subscriptions){
-            //当subscriberClass不相符时，直接跳跃到下一次循环
-            if(!subscription.subscriber.getClass().equals(subscriberClass)){
-                continue;
-            }else{
+            if(subscription.subscriber.getClass().equals(subscriberClass)){
                 //利用反射调用
                 try {
                     sendEventByThread(subscription,event);
@@ -220,6 +219,9 @@ public class EventBox {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
+            }else{
+                //当subscriberClass不相符时，直接跳跃到下一次循环
+                continue;
             }
         }
     }
@@ -237,13 +239,14 @@ public class EventBox {
     }
 
     /**
-     * 根据线程，将event转至对应subscriber的方法里
+     * TODO 根据线程，将event转至对应subscriber的方法里
      * @param subscription
      * @param event
      * @throws InvocationTargetException
      * @throws IllegalAccessException
      */
-    private void sendEventByThread(final Subscription subscription, final Object event) throws InvocationTargetException, IllegalAccessException {
+    private void sendEventByThread(final Subscription subscription, final Object event)
+            throws InvocationTargetException, IllegalAccessException {
 
         subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
 

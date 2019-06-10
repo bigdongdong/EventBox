@@ -10,27 +10,57 @@
     >
 
     <Button
-        android:onClick="sendFirstActivity"
-        android:text="只给FirstActivity发送：new String[]"
+        android:id="@+id/button1"
+        android:textAllCaps="false"
+        android:text="只给FirstActivity发送：String"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
     <Button
+        android:id="@+id/button2"
+        android:textAllCaps="false"
+        android:text="只给FirstActivity发送：String[]"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <Button
+        android:id="@+id/button3"
+        android:textAllCaps="false"
+        android:text="只给FirstActivity发送：float"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <Button
+        android:id="@+id/button4"
+        android:textAllCaps="false"
+        android:text="只给FirstActivity发送：Integer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <Button
+        android:id="@+id/button5"
+        android:textAllCaps="false"
+        android:text="只给FirstActivity发送：double"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <Button
+        android:textAllCaps="false"
+        android:layout_marginTop="20dp"
         android:onClick="sendSecondActivity"
         android:text="只给SecondActivity发送：爱你一万年"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
     <Button
+        android:textAllCaps="false"
         android:onClick="sendBothActivity"
         android:text="给两个Activity发送：爱你一万年"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
     <Button
+        android:textAllCaps="false"
         android:layout_marginTop="20dp"
         android:onClick="gotoFirstActivity"
         android:text="进入FirstActivity"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
     <Button
+        android:textAllCaps="false"
         android:onClick="gotoSecondActivity"
         android:text="进入SecondActivity"
         android:layout_width="wrap_content"

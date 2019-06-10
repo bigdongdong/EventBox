@@ -30,4 +30,9 @@ dependencies {
     //fastJson
     implementation 'com.alibaba:fastjson:1.1.71.android'
     implementation project(':moudle')
+
+    //butterKnife
+    implementation 'com.jakewharton:butterknife:8.8.1'
+    annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1'
+
 }
