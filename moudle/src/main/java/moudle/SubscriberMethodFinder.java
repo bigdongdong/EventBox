@@ -1,4 +1,4 @@
-package com.eventbox.cxd.moudle.eventbox;
+package moudle;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

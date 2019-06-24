@@ -6,7 +6,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 
-import com.eventbox.cxd.moudle.eventbox.EventBox;
+import moudle.EventBox;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;

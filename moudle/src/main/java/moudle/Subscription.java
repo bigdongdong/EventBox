@@ -1,4 +1,4 @@
-package com.eventbox.cxd.moudle.eventbox;
+package moudle;
 
 
 

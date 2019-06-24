@@ -8,10 +8,8 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.alibaba.fastjson.JSON;
-import com.eventbox.cxd.moudle.eventbox.EventBox;
-import com.eventbox.cxd.moudle.eventbox.Subscribe;
-
-import org.greenrobot.eventbus.EventBus;
+import moudle.EventBox;
+import moudle.Subscribe;
 
 public class FirstActivity extends AppCompatActivity {
 
