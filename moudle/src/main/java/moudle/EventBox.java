@@ -14,7 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 * 目前存在的问题：
 * 1.基础类型中 int,float,double 无法识别，但是Integer,Float,Double可以(基本类型不可以，但是可以使用它们的包装类)
 * 2.不建议使用非指向性event的send方法
-* 3.线程问题
+* 3.线程问题，暂时剔除线程相关
 * 4.unregister：hashmap中value为空的清除问题
 * */
 public class EventBox {
