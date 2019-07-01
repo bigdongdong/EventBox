@@ -2,7 +2,7 @@
 Android  事件盒子，指向性传递event ，一款比EventBus 更好用的Android事件总线框架！
 
 # 截图预览
-<img  width = "350" src = "https://github.com/bigdongdong/EventBox/blob/master/preview/screen.jpg"></img></br>
+<img  width = "350" src = "https://github.com/bigdongdong/EventBox/blob/master/preview/screen.jpg"></img>
 <img  width = "350" src = "https://github.com/bigdongdong/EventBox/blob/master/preview/1.gif"></img></br>
 <img  width = "350" src = "https://github.com/bigdongdong/EventBox/blob/master/preview/2.gif"></img>
 <img  width = "350" src = "https://github.com/bigdongdong/EventBox/blob/master/preview/both.gif"></img></br>
