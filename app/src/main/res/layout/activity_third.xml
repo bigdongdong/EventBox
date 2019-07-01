@@ -10,46 +10,22 @@
     >
 
     <Button
-        android:id="@+id/button1"
+        android:id="@+id/buttonString"
         android:textAllCaps="false"
-        android:text="只给FirstActivity发送：String"
+        android:text="给FirstActivity发送【String】：爱你一万年"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
     <Button
-        android:id="@+id/button2"
+        android:id="@+id/buttonInteger"
         android:textAllCaps="false"
-        android:text="只给FirstActivity发送：String[]"
+        android:text="给SecondtActivity发送【Integer】：2333"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
     <Button
-        android:id="@+id/button3"
-        android:textAllCaps="false"
-        android:text="只给FirstActivity发送：float"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-    <Button
-        android:id="@+id/button4"
-        android:textAllCaps="false"
-        android:text="只给FirstActivity发送：Integer"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-    <Button
-        android:id="@+id/button5"
-        android:textAllCaps="false"
-        android:text="只给FirstActivity发送：double"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-    <Button
+        android:id="@+id/buttonBoth"
         android:textAllCaps="false"
         android:layout_marginTop="20dp"
-        android:onClick="sendSecondActivity"
-        android:text="只给SecondActivity发送：爱你一万年"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-    <Button
-        android:textAllCaps="false"
-        android:onClick="sendBothActivity"
-        android:text="给两个Activity发送：爱你一万年"
+        android:text="给FirstActivity和SecondActivity发送【String】：\n爱你俩一万年"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
     <Button

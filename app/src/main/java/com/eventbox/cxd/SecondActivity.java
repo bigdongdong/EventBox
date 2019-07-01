@@ -33,11 +33,15 @@ public class SecondActivity extends AppCompatActivity {
 
     @Subscribe
     public void getData(String s){
-        Toast.makeText(this,"SecondActivity"+s,Toast.LENGTH_SHORT).show();
-        Log.i("EventBox", "SecondActivity: "+s);
+        Toast.makeText(this,"收到:Stiring:"+s,Toast.LENGTH_SHORT).show();
+        Log.i("EventBox", "收到:Stiring: "+s);
     }
 
-
+    @Subscribe
+    public void getData(Integer s){
+        Toast.makeText(this,"收到:Integer:"+s,Toast.LENGTH_SHORT).show();
+        Log.i("EventBox", "收到:Integer: "+s);
+    }
 
     public void goToThirdActivity(View view){
         this.startActivity(new Intent(this,ThirdActivity.class));

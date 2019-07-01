@@ -11,11 +11,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 
 /*
-* 目前存在的问题：
+* TODO 注意事项以及目前存在的问题：
 * 1.基础类型中 int,float,double 无法识别，但是Integer,Float,Double可以(基本类型不可以，但是可以使用它们的包装类)
-* 2.不建议使用非指向性event的send方法
-* 3.线程问题，暂时剔除线程相关
-* 4.unregister：hashmap中value为空的清除问题
+* 2.不建议使用非指向性event的send方法。更不建议混用
+* 3.unregister：hashmap中value为空的清除问题
 * */
 public class EventBox {
 
@@ -141,7 +140,6 @@ public class EventBox {
 //                }
 //            }
 //        }
-
 //        Log.i(TAG, "unRegister: subscriptionsBySubscriberClass："+subscriptionsBySubscriberClass.size());
 //        Log.i(TAG, "unRegister: subscriptionsByEventType："+subscriptionsByEventType.size());
     }
@@ -164,9 +162,8 @@ public class EventBox {
         }
 
         for(Subscription subscription : subscriptions){
-            //利用反射调用
             try {
-                sendEventByThread(subscription,event);
+                sendEvent(subscription,event);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -212,9 +209,8 @@ public class EventBox {
 
         for(Subscription subscription : subscriptions){
             if(subscription.subscriber.getClass().equals(subscriberClass)){
-                //利用反射调用
                 try {
-                    sendEventByThread(subscription,event);
+                    sendEvent(subscription,event);
                     return ;
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -239,46 +235,16 @@ public class EventBox {
     }
 
     /**
-     * TODO 根据线程，将event转至对应subscriber的方法里
+     * 进行event的发送
      * @param subscription
      * @param event
      * @throws InvocationTargetException
      * @throws IllegalAccessException
      */
-    private void sendEventByThread(final Subscription subscription, final Object event)
+    private void sendEvent(final Subscription subscription, final Object event)
             throws InvocationTargetException, IllegalAccessException {
 
         subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
-
-//        switch (subscription.subscriberMethod.threadMode){
-//            case DEFAULT:
-//                subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
-//                break;
-//            case MAIN:
-//                //TODO 主线程问题
-//
-//                break;
-//            case NEW_THREAD:
-//                new Runnable(){
-//                    @Override
-//                    public void run() {
-//                        try {
-//                            subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
-//                        } catch (Exception e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
-//                }.run();
-//                break;
-//        }
     }
-
-    /**
-     * 判断当前是否是主线程
-     * @return
-     */
-//    public boolean isMainThread() {
-//        return Looper.getMainLooper() == Looper.myLooper();
-//    }
 
 }
