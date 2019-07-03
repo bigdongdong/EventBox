@@ -34,7 +34,7 @@ Android  事件盒子，指向性传递event ，一款比EventBus 更好用的An
 
     @Override
     public void onDestroy() {
-        super.onStop();
+        super.onDestroy();
         EventBox.getDefault().unregister(this);
     }
 ```
