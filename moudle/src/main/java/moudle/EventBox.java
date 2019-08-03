@@ -21,7 +21,7 @@ public class EventBox {
 
     private static String TAG = "EventBox";
 
-    static volatile EventBox instance ;  //默认单例
+    private static volatile EventBox instance ;  //默认单例
 
     //subscriber类中 注解方法查找类
     private SubscriberMethodFinder subscriberMethodFinder = new SubscriberMethodFinder();
@@ -75,7 +75,7 @@ public class EventBox {
     }
 
     /**
-     * 进行订阅
+     * 进行订阅，创建一个subscription
      * @param subscriber
      * @param subscriberMethod
      */
@@ -92,6 +92,7 @@ public class EventBox {
         subscriptions.add(thisSuscription);
         subscriptionsBySubscriberClass.put(subscriber.getClass(),subscriptions);
 
+        subscriptions.clear();
 
         //2.subscriptionsByEventType中添加
         subscriptions = subscriptionsByEventType.get(eventType);
@@ -109,22 +110,30 @@ public class EventBox {
      */
     public synchronized void unregister(Object subscriber){
         //得到的subscriptions都需要在subscriptionsByEventType中移除
-        CopyOnWriteArrayList<Subscription> subscriptions = subscriptionsBySubscriberClass.remove(subscriber.getClass());
+        CopyOnWriteArrayList<Subscription> subscriptionsBySubscriber = subscriptionsBySubscriberClass.remove(subscriber.getClass());
 
         //从map中剔除subscription
         Set<Map.Entry<Class<?>,CopyOnWriteArrayList<Subscription>>> entries = subscriptionsByEventType.entrySet();
         for (Map.Entry<Class<?>, CopyOnWriteArrayList<Subscription>> entry : entries) {
-            CopyOnWriteArrayList<Subscription> subscriptions2 = entry.getValue();
+            CopyOnWriteArrayList<Subscription> subscriptionsByEvent = entry.getValue();
 
-            for(Subscription subscription : subscriptions2){
-                if(subscriptions.contains(subscription)){
+            for(Subscription subscription : subscriptionsByEvent){
+                if(subscriptionsBySubscriber.contains(subscription)){
 
                     //这里只移除了subscriptionsByEventType中某一个eventType的某一个subscription
                     //即使subscriptions2中全部被移除，map的长度也不会降低，只是value是空
-                    subscriptions2.remove(subscription);
+                    subscriptionsByEvent.remove(subscription);
+
+
+                    //如果清完之后，map是空，则让map删除该key-value
+                    if(subscriptionsByEvent == null || subscriptionsByEvent.isEmpty()){
+                        subscriptionsByEventType.remove(entry.getKey());
+                    }
                 }
             }
         }
+
+        Log.i(TAG, "unregister: "+subscriptionsBySubscriberClass.toString());
 
 //        TODO 从map中剔除subscription后，还需要剔除map中value已经为空的键对值
 //        TODO 但是对subscriptionsByEventType的操作会报错，日后再修改  ----2019_6_5
@@ -181,49 +190,49 @@ public class EventBox {
      *
      * @param event
      * @param subscriberClass
+     *
+     * TODO 优化方案：遍历一次，找出符合条件的subscription，这应该是唯一一个，然后直接发送并return，如果一个符合条件的都没有，则进行粘性缓存
      */
     public synchronized void send(Object event , Class<?> subscriberClass) {
         Class<?> eventType = event.getClass();
-        boolean hasRegisteredSubscriber = false ; //被指定的subscriber是否已经注册
+
+        /**
+         * 将对应event类型的所有subscriptions全部从subscriptionsByEventType中取出，
+         * 然后在该subscriptions列表中查找有没有对应subscriber的class等于subscriberClass的
+         * 一旦有一个满足上述条件，则代表已经注册，如果一个都不满足，则代表没有注册对应event类型的订阅
+          */
 
         //在subscriptionsByEventType中获取eventType对应的subscriptions
         CopyOnWriteArrayList<Subscription> subscriptions = subscriptionsByEventType.get(eventType);
 
+        Log.i(TAG, "send: "+subscriptionsByEventType.toString());
+        Log.i(TAG, "send: "+subscriptionsBySubscriberClass.toString());
+
         //判断对应subscriber是否已经注册
         if(subscriptions!=null){
-            for(Subscription subscription : subscriptions){
-               if(subscription.subscriber.getClass().equals(subscriberClass)){
-                   hasRegisteredSubscriber = true ;
-                   break;
-               }
-            }
-        }
-
-       //进行粘性处理
-        if(hasRegisteredSubscriber == false) {
-            List<Object> cacheEvents = cacheEventsBySubscriberClass.get(subscriberClass);
-            if (cacheEvents == null) {
-                cacheEvents = new ArrayList<>();
-            }
-            cacheEvents.add(event);
-            cacheEventsBySubscriberClass.put(subscriberClass, cacheEvents);
-            return;
-        }
-
-        for(Subscription subscription : subscriptions){
-            if(subscription.subscriber.getClass().equals(subscriberClass)){
-                //利用反射调用
-                try {
-                    sendEventByThread(subscription,event);
-                    return ;
-                } catch (Exception e) {
-                    e.printStackTrace();
+            for(Subscription subscription : subscriptions){   //TODO 这里的subscriber只能代表来自哪里，不能代表subscriber是否已注册！
+                if(subscription.subscriber.getClass().equals(subscriberClass)){
+                    //得到了唯一符合条件的subscription
+                    //利用反射调用
+                    try {
+                        sendEventByThread(subscription,event);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Log.e(TAG, "EventBox send Error : "+e.getMessage());
+                    }
+                    return;
                 }
-            }else{
-                //当subscriberClass不相符时，直接跳跃到下一次循环
-                continue;
             }
         }
+
+        //走到这一步，说明有对应类型的event被注册，但是对象subscriber中却没有
+        // 所以进行粘性处理
+        List<Object> cacheEvents = cacheEventsBySubscriberClass.get(subscriberClass);
+        if (cacheEvents == null) {
+            cacheEvents = new ArrayList<>();
+        }
+        cacheEvents.add(event);
+        cacheEventsBySubscriberClass.put(subscriberClass, cacheEvents);
     }
 
 
@@ -243,42 +252,12 @@ public class EventBox {
      * @param subscription
      * @param event
      * @throws InvocationTargetException
-     * @throws IllegalAccessException
      */
     private void sendEventByThread(final Subscription subscription, final Object event)
             throws InvocationTargetException, IllegalAccessException {
 
         subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
 
-//        switch (subscription.subscriberMethod.threadMode){
-//            case DEFAULT:
-//                subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
-//                break;
-//            case MAIN:
-//                //TODO 主线程问题
-//
-//                break;
-//            case NEW_THREAD:
-//                new Runnable(){
-//                    @Override
-//                    public void run() {
-//                        try {
-//                            subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
-//                        } catch (Exception e) {
-//                            e.printStackTrace();
-//                        }
-//                    }
-//                }.run();
-//                break;
-//        }
     }
-
-    /**
-     * 判断当前是否是主线程
-     * @return
-     */
-//    public boolean isMainThread() {
-//        return Looper.getMainLooper() == Looper.myLooper();
-//    }
 
 }
