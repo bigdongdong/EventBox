@@ -38,7 +38,7 @@ class SubscriberMethodFinder {
         for(Method method : methods){
             subscribeAnno = method.getAnnotation(Subscribe.class);
             if(subscribeAnno != null && method.getParameterTypes().length == 1){
-                subscriberMethods.add(new SubscriberMethod(method,method.getParameterTypes()[0],subscribeAnno.threadMode())) ;
+                subscriberMethods.add(new SubscriberMethod(method,method.getParameterTypes()[0])) ;
             }
         }
         return subscriberMethods ;
