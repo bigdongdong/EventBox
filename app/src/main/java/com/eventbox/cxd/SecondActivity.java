@@ -8,7 +8,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import moudle.EventBox;
-import moudle.Subscribe;
+import moudle.EventBoxSubscribe;
 
 public class SecondActivity extends AppCompatActivity {
 
@@ -31,13 +31,19 @@ public class SecondActivity extends AppCompatActivity {
         EventBox.getDefault().unregister(this);
     }
 
-    @Subscribe
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        EventBox.getDefault().unregister(this);
+//    }
+
+    @EventBoxSubscribe
     public void getData(String s){
         Toast.makeText(this,"收到:Stiring:"+s,Toast.LENGTH_SHORT).show();
         Log.i("EventBox", "收到:Stiring: "+s);
     }
 
-    @Subscribe
+    @EventBoxSubscribe
     public void getData(Integer s){
         Toast.makeText(this,"收到:Integer:"+s,Toast.LENGTH_SHORT).show();
         Log.i("EventBox", "收到:Integer: "+s);

@@ -1,16 +1,18 @@
 package moudle;
 
+import java.lang.reflect.Method;
 
 /**
- * Subscription类，包含一个subscriber和一个subscriberMethod，是单个event发送的最小目标
+ * Subscription类
  */
-final class Subscription {
-    final Object subscriber;
-    final SubscriberMethod subscriberMethod;
+public final class Subscription {
+    final Object subscriber; //在invoke时需要用到
+    final Class<?> eventType;
+    final Method method;
 
-    Subscription(Object subscriber, SubscriberMethod subscriberMethod) {
+    public Subscription(Object subscriber, Class<?> eventType, Method method) {
         this.subscriber = subscriber;
-        this.subscriberMethod = subscriberMethod;
+        this.eventType = eventType;
+        this.method = method;
     }
-
 }

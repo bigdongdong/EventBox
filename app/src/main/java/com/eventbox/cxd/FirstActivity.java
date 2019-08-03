@@ -7,9 +7,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
-import com.alibaba.fastjson.JSON;
 import moudle.EventBox;
-import moudle.Subscribe;
+import moudle.EventBoxSubscribe;
 
 public class FirstActivity extends AppCompatActivity {
 
@@ -32,8 +31,13 @@ public class FirstActivity extends AppCompatActivity {
         EventBox.getDefault().unregister(this);
     }
 
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        EventBox.getDefault().unregister(this);
+//    }
 
-    @Subscribe
+    @EventBoxSubscribe
     public void getData(String s){
         Toast.makeText(this,"收到:String:"+s,Toast.LENGTH_SHORT).show();
         Log.i("EventBox", "收到:String: "+s);

@@ -1,55 +1,40 @@
 package moudle;
 
 import android.util.Log;
+
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 
 /*
-* TODO 注意事项以及目前存在的问题：
-* 1.基础类型中 int,float,double 无法识别，但是Integer,Float,Double可以(基本类型不可以，但是可以使用它们的包装类)
-* 2.不建议使用非指向性event的send方法。更不建议混用
-* 3.unregister：hashmap中value为空的清除问题
 * */
 public class EventBox {
 
-    private static String TAG = "EventBox";
+    public final  static String TAG = "EventBox";
 
-    private static volatile EventBox instance ;  //默认单例
-
-    //subscriber类中 注解方法查找类
-    private SubscriberMethodFinder subscriberMethodFinder = new SubscriberMethodFinder();
-
-    //<eventType，List<Subscription> >
-    private  Map<Class<?>, CopyOnWriteArrayList<Subscription>> subscriptionsByEventType = new HashMap<>();
+    private static volatile EventBox defaultInstanse ;  //默认单例
 
     //<subscriberClass , List<Subscription> >
-    private Map<Class<?>,CopyOnWriteArrayList<Subscription>> subscriptionsBySubscriberClass = new HashMap<>();
+    private Map<Class<?>,List<Subscription>> subscriptionsBySubscriberClass = new HashMap<>();
 
     //<subscriberClass , List<event> >  未被及时处理的event缓存map，且已经指明订阅者
     private Map<Class<?>, List<Object>> cacheEventsBySubscriberClass = new HashMap<>();
 
-    //单例构造器
+
     public static EventBox getDefault(){
-        if (instance == null) {
+        if (defaultInstanse == null) {
             synchronized (EventBox.class) {
-                if (instance == null) {
-                    instance = new EventBox();
+                if (defaultInstanse == null) {
+                    defaultInstanse = new EventBox();
                 }
             }
         }
-        return instance;
+        return defaultInstanse;
     }
 
-    /**
-     * 注册
-     * @param subscriber 需要注册eventbox的类
-     */
     public synchronized void register(Object subscriber) {
         Class<?> subscriberClass = subscriber.getClass();
 
@@ -59,9 +44,9 @@ public class EventBox {
         }
 
         //根据这个类的类类型，查找到所有带有注解 @Subscribe 的方法
-        List<SubscriberMethod> subscriberMethods = subscriberMethodFinder.findSubscriberMethods(subscriberClass);
-        for (SubscriberMethod subscriberMethod : subscriberMethods) {
-            subscribe(subscriber, subscriberMethod);
+        List<Subscription> subscriptions = SubscriptionFinder.findSubscriberMethods(subscriber);
+        if(subscriptions!=null && subscriptions.size()!=0){
+            subscriptionsBySubscriberClass.put(subscriberClass,subscriptions);
         }
 
         //检查并发送指向性event
@@ -71,113 +56,19 @@ public class EventBox {
                 send(cacheEvent , subscriberClass);
             }
         }
+
+        Log.i(TAG, "register: "+subscriptionsBySubscriberClass.toString()+"\n");
     }
 
-    /**
-     * 进行订阅，创建一个subscription
-     * @param subscriber
-     * @param subscriberMethod
-     */
-    private void subscribe(Object subscriber, SubscriberMethod subscriberMethod) {
-        Class<?> eventType = subscriberMethod.eventType;
-        Subscription thisSuscription = new Subscription(subscriber, subscriberMethod);
-        CopyOnWriteArrayList<Subscription> subscriptions ;
 
-        //1.subscriptionsBySubscriberClass中添加
-        subscriptions  = subscriptionsBySubscriberClass.get(subscriber.getClass());
-        if(subscriptions == null){
-            subscriptions = new CopyOnWriteArrayList<>();
-        }
-        subscriptions.add(thisSuscription);
-        subscriptionsBySubscriberClass.put(subscriber.getClass(),subscriptions);
-
-        subscriptions.clear();
-
-        //2.subscriptionsByEventType中添加
-        subscriptions = subscriptionsByEventType.get(eventType);
-        if(subscriptions == null){
-            subscriptions = new CopyOnWriteArrayList<>();
-        }
-        subscriptions.add(thisSuscription);
-        subscriptionsByEventType.put(eventType, subscriptions);
-
-    }
-
-    /**
-     * 注销subsciber
-     * @param subscriber
-     */
     public synchronized void unregister(Object subscriber){
-        //得到的subscriptions都需要在subscriptionsByEventType中移除
-        CopyOnWriteArrayList<Subscription> subscriptionsBySubscriber = subscriptionsBySubscriberClass.remove(subscriber.getClass());
+        subscriptionsBySubscriberClass.remove(subscriber.getClass());
+        cacheEventsBySubscriberClass.remove(subscriber.getClass());
 
-        //从map中剔除subscription
-        Set<Map.Entry<Class<?>,CopyOnWriteArrayList<Subscription>>> entries = subscriptionsByEventType.entrySet();
-        for (Map.Entry<Class<?>, CopyOnWriteArrayList<Subscription>> entry : entries) {
-            CopyOnWriteArrayList<Subscription> subscriptionsByEvent = entry.getValue();
+        Log.i(TAG, "unregister: "+subscriptionsBySubscriberClass.toString()+"\n");
 
-            for(Subscription subscription : subscriptionsByEvent){
-                if(subscriptionsBySubscriber.contains(subscription)){
-
-                    //这里只移除了subscriptionsByEventType中某一个eventType的某一个subscription
-                    //即使subscriptions2中全部被移除，map的长度也不会降低，只是value是空
-                    subscriptionsByEvent.remove(subscription);
-
-
-                    //如果清完之后，map是空，则让map删除该key-value
-                    if(subscriptionsByEvent == null || subscriptionsByEvent.isEmpty()){
-                        subscriptionsByEventType.remove(entry.getKey());
-                    }
-                }
-            }
-        }
-
-        Log.i(TAG, "unregister: "+subscriptionsBySubscriberClass.toString());
-
-//        TODO 从map中剔除subscription后，还需要剔除map中value已经为空的键对值
-//        TODO 但是对subscriptionsByEventType的操作会报错，日后再修改  ----2019_6_5
-//        Iterator<Map.Entry<Class<?>, CopyOnWriteArrayList<Subscription>>>  it
-//                                                  = subscriptionsByEventType.entrySet().iterator();
-//
-//        synchronized (subscriptionsByEventType){
-//            while(it.hasNext()){
-//                Map.Entry<Class<?>, CopyOnWriteArrayList<Subscription>> entry = it.next();
-//                CopyOnWriteArrayList<Subscription> subscriptions3 = entry.getValue();
-//                if(subscriptions3 == null || subscriptions3.size() == 0){
-//                    //这里整理map，去除空value
-//                    subscriptionsByEventType.remove(entry.getKey());
-//                }
-//            }
-//        }
-//        Log.i(TAG, "unRegister: subscriptionsBySubscriberClass："+subscriptionsBySubscriberClass.size());
-//        Log.i(TAG, "unRegister: subscriptionsByEventType："+subscriptionsByEventType.size());
     }
 
-    /**
-     * 发送非指向性event
-     *
-     * @param event
-     */
-    @Deprecated
-    public synchronized void send(Object event) {
-        Class<?> eventType = event.getClass();
-
-        //在subscriptionsByEventType中获取eventType对应的subscriptions
-        CopyOnWriteArrayList<Subscription> subscriptions = subscriptionsByEventType.get(eventType);
-
-        if(subscriptions == null) {
-            Log.e(TAG, "未查找到已注册的subscriber" );
-            return;
-        }
-
-        for(Subscription subscription : subscriptions){
-            try {
-                sendEvent(subscription,event);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     /**
      * 发送指向性event
@@ -188,48 +79,30 @@ public class EventBox {
      * @param event
      * @param subscriberClass
      *
-     * TODO 优化方案：遍历一次，找出符合条件的subscription，这应该是唯一一个，然后直接发送并return，如果一个符合条件的都没有，则进行粘性缓存
      */
     public synchronized void send(Object event , Class<?> subscriberClass) {
+        List<Subscription> subscriptions = subscriptionsBySubscriberClass.get(subscriberClass);
+        if(subscriptions == null || subscriptions.size()==0){
+            //走到这一步，说明有对应类型的event被注册，但是对象subscriber中却没有
+            // 所以进行粘性处理
+            List<Object> cacheEvents = cacheEventsBySubscriberClass.get(subscriberClass);
+            if (cacheEvents == null) {
+                cacheEvents = new ArrayList<>();
+            }
+            cacheEvents.add(event); //将cacheEvent加入到list中
+            cacheEventsBySubscriberClass.put(subscriberClass, cacheEvents);
+            return;
+        }
+
+        //注册过的，检查event的类型，判断目的subscriber中是否有此类型
         Class<?> eventType = event.getClass();
-
-        /**
-         * 将对应event类型的所有subscriptions全部从subscriptionsByEventType中取出，
-         * 然后在该subscriptions列表中查找有没有对应subscriber的class等于subscriberClass的
-         * 一旦有一个满足上述条件，则代表已经注册，如果一个都不满足，则代表没有注册对应event类型的订阅
-          */
-
-        //在subscriptionsByEventType中获取eventType对应的subscriptions
-        CopyOnWriteArrayList<Subscription> subscriptions = subscriptionsByEventType.get(eventType);
-
-        Log.i(TAG, "send: "+subscriptionsByEventType.toString());
-        Log.i(TAG, "send: "+subscriptionsBySubscriberClass.toString());
-
-        //判断对应subscriber是否已经注册
-        if(subscriptions!=null){
-            for(Subscription subscription : subscriptions){   //TODO 这里的subscriber只能代表来自哪里，不能代表subscriber是否已注册！
-                if(subscription.subscriber.getClass().equals(subscriberClass)){
-                    //得到了唯一符合条件的subscription
-                    //利用反射调用
-                    try {
-                        sendEvent(subscription,event);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        Log.e(TAG, "EventBox send Error : "+e.getMessage());
-                    }
-                    return;
-                }
+        for(Subscription subscription : subscriptions){
+            if(eventType == subscription.eventType){
+                //找到同类型，发射
+                sendEvent(subscription,event);
+                return;
             }
         }
-
-        //走到这一步，说明有对应类型的event被注册，但是对象subscriber中却没有
-        // 所以进行粘性处理
-        List<Object> cacheEvents = cacheEventsBySubscriberClass.get(subscriberClass);
-        if (cacheEvents == null) {
-            cacheEvents = new ArrayList<>();
-        }
-        cacheEvents.add(event);
-        cacheEventsBySubscriberClass.put(subscriberClass, cacheEvents);
     }
 
 
@@ -250,10 +123,17 @@ public class EventBox {
      * @param event
      * @throws InvocationTargetException
      */
-    private void sendEvent(final Subscription subscription, final Object event)
-            throws InvocationTargetException, IllegalAccessException {
+    private void sendEvent(final Subscription subscription, final Object event) {
 
-        subscription.subscriberMethod.method.invoke(subscription.subscriber,event);
+        try {
+
+            subscription.method.invoke(subscription.subscriber,event);
+
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
     }
 
 }
