@@ -43,7 +43,7 @@ Android  事件盒子，指向性传递event ，一款比EventBus 更好用的An
 通过@Subscribe来注解方法，使该方法能被EventBox检测到，添加进subscription池
 
 ```java
-    @Subscribe
+    @EventBoxSubscribe
     public void acceptData(String s){
         //do something ...
         
@@ -72,9 +72,9 @@ Android  事件盒子，指向性传递event ，一款比EventBus 更好用的An
 
 </br></br></br>
 # 注意事项：  
-**同一类中可以有多个带@Subscribe的方法  
+**同一类中可以有多个带@EventBoxSubscribe的方法  
 方法的名称可以自定义  
-方法仅可有一个参数，且同一类中所有带@Subscribe的方法参数类型唯一  
+方法仅可有一个参数，且同一类中所有带@EventBoxSubscribe的方法参数类型唯一  
 当event类型为int,float,double时，在接受方法中需指定参数类型为包装类：Integer,Float,Double  
 用户需要自己处理线程问题，推荐使用 rxjava2**
 
