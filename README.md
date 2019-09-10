@@ -18,7 +18,7 @@ Android  事件盒子，指向性传递event ，一款比EventBus 更好用的An
   }
   
   dependencies {
-	  implementation 'com.github.bigdongdong:EventBox:1.0' //添加依赖
+	  implementation 'com.github.bigdongdong:EventBox:2.0' //添加依赖
   }
 ```
 
@@ -44,7 +44,7 @@ Android  事件盒子，指向性传递event ，一款比EventBus 更好用的An
 
 ```java
     @Subscribe
-    public void getData(String s){
+    public void acceptData(String s){
         //do something ...
         
     }
@@ -65,7 +65,7 @@ Android  事件盒子，指向性传递event ，一款比EventBus 更好用的An
 ```java
   EventBox.getDefault().send("爱你们一万年", FirstActivity.class ,SecondActivity.class,ThirdActivity.class...);
 ```
-**3.非指向性事件：  
+**3.非指向性事件（2.0中已移除）：  
 不推荐的方法，send只有一个参数：event时，将默认发送给所有符合条件的sbscriber,并且不做粘性事件处理，后注册的suscriber将无法收到它注册之前发送的event**
 
 
