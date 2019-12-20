@@ -8,7 +8,7 @@ import android.widget.Button;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import moudle.EventBox;
+import com.cxd.eventbox.EventBox;
 
 public class ThirdActivity extends AppCompatActivity implements View.OnClickListener {
 

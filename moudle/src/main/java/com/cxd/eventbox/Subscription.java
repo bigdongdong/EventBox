@@ -1,4 +1,4 @@
-package moudle;
+package com.cxd.eventbox;
 
 import java.lang.reflect.Method;
 

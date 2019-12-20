@@ -1,4 +1,4 @@
-package moudle;
+package com.cxd.eventbox;
 
 import android.util.Log;
 
@@ -6,7 +6,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
-import static moudle.EventBox.TAG;
+import static com.cxd.eventbox.EventBox.TAG;
 
 
 /**

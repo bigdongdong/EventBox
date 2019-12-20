@@ -7,8 +7,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
-import moudle.EventBox;
-import moudle.EventBoxSubscribe;
+import com.cxd.eventbox.EventBox;
+import com.cxd.eventbox.EventBoxSubscribe;
 
 public class SecondActivity extends AppCompatActivity {
 

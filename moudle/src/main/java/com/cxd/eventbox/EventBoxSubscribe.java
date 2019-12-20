@@ -1,4 +1,4 @@
-package moudle;
+package com.cxd.eventbox;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
