@@ -18,7 +18,7 @@ Android  事件盒子，指向性传递event ，一款比EventBus 更好用的An
   }
   
   dependencies {
-	  implementation 'com.github.bigdongdong:EventBox:2.0' //添加依赖
+	  implementation 'com.github.bigdongdong:EventBox:2.5' //添加依赖
   }
 ```
 
