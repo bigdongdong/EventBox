@@ -40,7 +40,7 @@ Android  事件盒子，指向性传递event ，一款比EventBus 更好用的An
 ```
 
 **2.添加event的订阅方法**  
-通过@Subscribe来注解方法，使该方法能被EventBox检测到，添加进subscription池
+通过@EventBoxSubscribe来注解方法，使该方法能被EventBox检测到，添加进subscription池
 
 ```java
     @EventBoxSubscribe
