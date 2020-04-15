@@ -10,6 +10,9 @@ import java.util.Map;
 
 
 /*
+* create by cxd on 2019/5/1
+* 在上海，和女友住在宾馆里，特别纪念一下
+* 当时我临近毕业，她在上财读暑校
 * */
 public class EventBox {
 
