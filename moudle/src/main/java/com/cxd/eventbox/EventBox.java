@@ -42,9 +42,10 @@ public class EventBox {
         Class<?> subscriberClass = subscriber.getClass();
 
         //避免重复注册
-        if (subscriptionsBySubscriberClass.containsKey(subscriberClass)){
-            return;
-        }
+        //没有重复注册这个概念   ----2020/9/10
+//        if (subscriptionsBySubscriberClass.containsKey(subscriberClass)){
+//            return;
+//        }
 
         //根据这个类的类类型，查找到所有带有注解 @Subscribe 的方法
         List<Subscription> subscriptions = SubscriptionFinder.findSubscriberMethods(subscriber);
